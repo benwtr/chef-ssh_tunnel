@@ -1,0 +1,49 @@
+#!/bin/sh
+exec 2>&1
+
+# connection params
+SSH_HOST='<%= node[:ssh_tunnel][:ssh_hostname] %>'
+SSH_PORT=<%= node[:ssh_tunnel][:ssh_port] %>
+SSH_USER='<%= node[:ssh_tunnel][:ssh_user] %>'
+SSH_KEY='<%= node[:ssh_tunnel][:ssh_private_key_file] %>'
+SSH_KNOWN_HOSTS='<%= node[:ssh_tunnel][:ssh_known_hosts] %>'
+
+# forwarding params
+CONNECT_PORT=<%= node[:ssh_tunnel][:connect_port] %>            # local connection port
+FORWARD_HOST='<%= node[:ssh_tunnel][:forward_host] %>'
+FORWARD_PORT=<%= node[:ssh_tunnel][:forward_port] %>
+
+# forwarding options
+# FWD -> Standard port forward using -L
+# REV -> Reverse tunnel using -R
+# DUAL -> Bi-directional, useful for binary log purge scripts
+DIRECTION="<%= node[:ssh_tunnel][:tunnel_direction] %>"
+
+CMD="<%= node[:ssh_tunnel][:ssh_cmd] %>"
+
+FORWARD_TYPE="-L"
+if [ "$DIRECTION" = "REV" ]
+then
+    FORWARD_TYPE="-R"
+elif [ "$DIRECTION" = "DUAL" ]
+then
+    FORWARD_TYPE="-R ${CONNECT_PORT}:${FORWARD_HOST}:${FORWARD_PORT} -L" 
+fi
+
+ARGS="-p ${SSH_PORT} -N $FORWARD_TYPE ${CONNECT_PORT}:${FORWARD_HOST}:${FORWARD_PORT} ${SSH_USER}@${SSH_HOST}"
+
+if [ -n "$SSH_KEY" ]
+then
+    ARGS="-i ${SSH_KEY} ${ARGS}"
+fi
+
+if [ -n "$SSH_KNOWN_HOSTS" ]
+then
+    ARGS="-o UserKnownHostsFile=${SSH_KNOWN_HOSTS} ${ARGS}"
+else
+    ARGS="-o StrictHostKeyChecking=no ${ARGS}"
+fi
+
+exec ${CMD} ${ARGS} 2>&1
+
+

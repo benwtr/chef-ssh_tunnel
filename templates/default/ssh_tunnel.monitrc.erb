@@ -1,0 +1,8 @@
+check process <%= @name %>
+  with pidfile <%= @pid_file %>
+  start program = "/bin/sh -c 'sv restart <%= @name %>"
+  stop program = "/bin/sh -c 'sv stop <%= @name %>'"
+  <% if @tunnel_direction != 'REV' %>
+  if failed host 127.0.0.1 port <%= @connect_port %>
+    with timeout 15 seconds then restart
+  <% end %>
